@@ -1,101 +1,160 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Breadcrumb from "../components/Breadcrumb";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+
+const berita = [
+  {
+    id: 1,
+    judul: "e-Journal Universitas Sam Ratulangi",
+    kategori: "E-Journal Nasional",
+    gambar: "/images/e-journal.png",
+    link: "https://ejournal.unsrat.ac.id/",
+  },
+  {
+    id: 2,
+    judul: "Garuda : Garba Rujukan Digital",
+    kategori: "E-Journal Nasional",
+    gambar: "/images/garuda.png",
+    link: "https://garuda.kemdikbud.go.id/",
+  },
+  {
+    id: 3,
+    judul: "Neliti : Repositori Ilmiah Indonesia",
+    kategori: "E-Journal Nasional",
+    gambar: "/images/neliti.png",
+    link: "https://www.neliti.com/",
+  },
+];
+
+const images = [
+  "/images/gedung1.png",
+];
+
+const secondaryColor = "#784d1e"; // Secondary color
+const secondaryHoverColor = "#5a3516"; // Secondary hover color
+const textColor = "#333333"; // Main text color
+const backgroundColor = "#928776"; // Neutral background color
+const borderColor = "#CCCCCC"; // Border/Divider color
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const router = useRouter();
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) =>
+        prevIndex === images.length - 1 ? 0 : prevIndex + 1
+      );
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="min-h-screen" style={{ backgroundColor }}>
+      <main className="flex-1">
+        {/* Breadcrumb */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <Breadcrumb items={[{ label: "Beranda", href: "/" }]} />
         </div>
+
+        {/* Hero Section with Slideshow */}
+        <section className="relative w-full h-[500px] overflow-hidden">
+          {images.map((src, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-opacity duration-1000 ${
+                index === currentIndex ? "opacity-100" : "opacity-0"
+              }`}
+              style={{
+                backgroundImage: `url(${src})`,
+              }}
+            >
+              <div className="absolute inset-0 bg-black opacity-60"></div>
+              <div className="relative text-center text-white z-10 flex flex-col items-center justify-center h-full">
+                <h2 className="text-5xl font-extrabold mb-4">
+                  Selamat Datang di <br /> Perpustakaan UNSRAT
+                </h2>
+                <p className="text-lg mb-6 font-light">
+                  Pusat informasi dan literasi terbaik untuk mendukung kegiatan akademik Anda.
+                </p>
+                <button
+                  className="px-6 py-3 rounded-lg font-semibold transition transform hover:scale-105"
+                  style={{ backgroundColor: secondaryColor, color: "#FFFFFF" }}
+                  aria-label="Jelajahi Perpustakaan"
+                  onClick={() => router.push("/peminjaman")}
+                >
+                  Jelajahi Sekarang
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* E-Journal Nasional */}
+        <section id="berita" className="py-16" style={{ backgroundColor }}>
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h3 className="text-3xl font-bold text-[#FFFFFF]" >E-Journal Nasional</h3>
+              <p className="mt-2 text-[#FFFFFF]" >
+                Akses berbagai sumber jurnal nasional untuk mendukung penelitian dan studi Anda.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {berita.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-white shadow-md rounded-lg overflow-hidden transform hover:scale-105 transition duration-300 cursor-pointer"
+                  onClick={() => window.open(item.link, "_blank")}
+                  style={{ borderColor }}
+                >
+                  <div className="relative w-full h-48 bg-gray-200 flex justify-center items-center">
+                    <Image
+                      src={item.gambar}
+                      alt={item.judul}
+                      width={250}
+                      height={150}
+                      objectFit="contain"
+                      className="p-4"
+                    />
+                  </div>
+                  <div className="p-6 text-center">
+                    <h4 className="text-lg font-bold mb-2" style={{ color: textColor }}>{item.judul}</h4>
+                    <p className="text-sm" style={{ color: textColor }}>{item.kategori}</p>
+                    <button
+                      className="mt-4 px-4 py-2 rounded-md transition w-full"
+                      style={{ backgroundColor: secondaryColor, color: "#FFFFFF" }}
+                      aria-label={`Baca lebih lanjut tentang ${item.judul}`}
+                    >
+                      Selengkapnya
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-16 text-white" style={{ background: `linear-gradient(to right, ${secondaryColor}, ${secondaryHoverColor})` }}>
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h3 className="text-3xl font-bold">Butuh Buku atau Referensi?</h3>
+            <p className="text-lg mt-2" style={{ color: "#E0E0E0" }}>
+              Dapatkan akses ke koleksi buku digital dan jurnal ilmiah terbaik.
+            </p>
+            <button
+              className="mt-6 px-6 py-3 rounded-lg font-semibold transition transform hover:scale-105"
+              style={{ backgroundColor: secondaryColor, color: "#FFFFFF" }}
+              onClick={() => router.push("/peminjaman")}
+            >
+              Pinjam Buku Sekarang
+            </button>
+          </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }

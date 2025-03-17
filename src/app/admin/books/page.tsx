@@ -29,6 +29,18 @@ const AdminBooksPage = () => {
         }
     };
 
+    const deleteBook = async (id) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/${id}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) throw new Error("Gagal menghapus buku");
+            fetchBooks(); // Refresh the book list after deletion
+        } catch (error) {
+            console.error(error.message);
+        }
+    };
+
     return (
         <div className="p-6 max-w-7xl mx-auto bg-white shadow-md rounded-lg">
             <h1 className="text-3xl font-bold mb-6">Daftar Buku</h1>
@@ -75,7 +87,10 @@ const AdminBooksPage = () => {
                                         {/* <Button className="bg-[#784d1e] hover:bg-[#5a3516] text-white p-2 rounded-lg shadow flex items-center justify-center w-10 h-10">
                                             <Pencil size={18} />
                                         </Button> */}
-                                        <Button className="bg-gray-500 hover:bg-gray-600 text-white p-2 rounded-lg shadow flex items-center justify-center w-10 h-10">
+                                        <Button 
+                                            className="bg-gray-500 hover:bg-gray-600 text-white p-2 rounded-lg shadow flex items-center justify-center w-10 h-10"
+                                            onClick={() => deleteBook(book.id)}
+                                        >
                                             <Trash size={18} />
                                         </Button>
                                     </TableCell>

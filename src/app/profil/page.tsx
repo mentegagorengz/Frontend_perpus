@@ -5,7 +5,7 @@ import Image from "next/image";
 
 export default function Profil() {
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-white min-h-screen">
       <div className="container mx-auto py-12 px-6">
         {/* Breadcrumb */}
         <Breadcrumb
@@ -17,9 +17,7 @@ export default function Profil() {
 
         {/* Header Section */}
         <header className="mb-12 text-center md:text-left">
-          <h1 className="text-5xl font-extrabold text-[#1f2023]">
-            Profil Perpustakaan UNSRAT
-          </h1>
+          <h1 className="text-5xl font-extrabold text-[#1f2023]">Profil Perpustakaan UNSRAT</h1>
         </header>
 
         {/* Sejarah Perpustakaan UNSRAT */}
@@ -49,7 +47,7 @@ export default function Profil() {
         </section>
 
         {/* Visi dan Misi */}
-        <section className="mb-12 bg-white shadow-md p-8 rounded-lg">
+        <section className="mb-12 bg-gray-100 shadow-md p-8 rounded-lg">
           <h2 className="text-3xl font-bold text-[#1f2023] mb-4">Visi</h2>
           <p className="text-gray-700 text-lg">
             Menjadi pusat informasi ilmiah unggul dan berbudaya yang memberikan pelayanan prima berbasis teknologi, informasi, dan komunikasi bagi sivitas akademika serta meningkatkan daya saing.

@@ -85,7 +85,7 @@ export default function Home() {
                   className="px-6 py-3 rounded-lg font-semibold transition transform hover:scale-105"
                   style={{ backgroundColor: secondaryColor, color: "#FFFFFF" }}
                   aria-label="Jelajahi Perpustakaan"
-                  onClick={() => router.push("/peminjaman")}
+                  onClick={() => router.push("/pencarianbuku")}
                 >
                   Jelajahi Sekarang
                 </button>

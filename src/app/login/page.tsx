@@ -144,6 +144,11 @@ export default function LoginPage() {
     }
   };
 
+  const handleClosePopup = () => {
+    setShowSuccessPopup(false);
+    setIsRegistering(false); // Kembali ke mode login setelah menutup popup
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
@@ -167,13 +172,24 @@ export default function LoginPage() {
               <input type="email" placeholder="Email" value={email} onChange={handleInputChange(setEmail)} className="w-full p-3 border border-gray-300 rounded-lg mb-3" />
               <input type="password" placeholder="Password" value={password} onChange={handleInputChange(setPassword)} className="w-full p-3 border border-gray-300 rounded-lg mb-3" />
               <button onClick={handleLogin} className="w-full bg-[#1f2023] text-white py-3 rounded-lg mb-3">Login</button>
-              <button onClick={() => setIsRegistering(true)} className="w-full text-blue-500">Belum punya akun? Daftar</button>
+              <button onClick={() => setIsRegistering(true)} className="w-full text-blue-500 hover:text-blue-700">Belum punya akun? Daftar</button>
             </>
           )
         ) : (
           <p>Loading...</p>
         )}
       </div>
+
+      {/* Popup Sukses */}
+      {showSuccessPopup && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center">
+            <h2 className="text-2xl font-bold text-green-600 mb-4">Berhasil!</h2>
+            <p className="mb-4">Anda berhasil mendaftar akun, Silakan Login</p>
+            <button onClick={handleClosePopup} className="bg-[#1f2023] text-white py-2 px-4 rounded-lg">Continue</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

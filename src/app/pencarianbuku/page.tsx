@@ -84,9 +84,11 @@ function SearchBooks() {
                   {book.imageUrl ? (
                     <img src={book.imageUrl} alt={book.title} className="w-24 h-32 object-cover rounded-md" />
                   ) : (
-                    <div className="w-24 h-32 bg-gray-300 rounded-md flex items-center justify-center text-gray-600">
-                      Gambar Tidak Tersedia
-                    </div>
+                    <img 
+                      src={book.imageUrl ? book.imageUrl : '/images/default-image.png'} // Gambar default
+                      alt={book.title}
+                      className="w-24 h-32 object-cover rounded-md"
+                    />
                   )}
                   <div className="ml-4 flex-1">
                     <h3 className="text-lg font-bold text-gray-900">{book.title}</h3>

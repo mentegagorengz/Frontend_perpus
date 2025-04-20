@@ -2,308 +2,178 @@
 
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Users, BookOpen, CheckCircle, ListChecks, Bell } from "lucide-react";
 import { Bar } from "react-chartjs-2";
 import withAuth from "@/hoc/withAuth";
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import moment from "moment";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const USERS_API_URL = "http://localhost:4000/users";
-const BOOKS_API_URL = "http://localhost:4000/books";
-const TRANSACTIONS_API_URL = "http://localhost:4000/transactions";
-
 const AdminDashboard = () => {
-  const [userRoles, setUserRoles] = useState({ admins: 0, users: 0 });
-  const [books, setBooks] = useState({ totalBooks: 0, availableBooks: 0, borrowedBooks: 0 });
-  const [transactions, setTransactions] = useState([]);
-  const [newTransaction, setNewTransaction] = useState(null);
-  const [totalBorrowed, setTotalBorrowed] = useState(0);
-  const [dailyData, setDailyData] = useState({ labels: [], data: [] });
-  const [monthlyData, setMonthlyData] = useState({ labels: [], data: [] });
-  const [yearlyData, setYearlyData] = useState({ labels: [], data: [] });
+  const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
-  const [selectedPeriod, setSelectedPeriod] = useState("daily");
 
   useEffect(() => {
-    fetchUserRoles();
-    fetchBooks();
-    fetchTransactions();
-    fetchDailyReport();
-    fetchMonthlyReport();
-    fetchYearlyReport();
-
-    const interval = setInterval(() => {
-      fetchTransactions(true);
-    }, 10000);
-
-    return () => clearInterval(interval);
+    fetch("http://localhost:4000/dashboard")
+      .then((res) => res.json())
+      .then((data) => setData(data))
+      .catch((err) => {
+        console.error("Error loading dashboard:", err);
+        setError("Gagal memuat data dashboard.");
+      });
   }, []);
 
-  const fetchUserRoles = async () => {
-    try {
-      const response = await fetch(USERS_API_URL);
-      if (!response.ok) throw new Error("Gagal mengambil data pengguna");
-      const data = await response.json();
+  if (!data) {
+    return <div className="p-6">Memuat data dashboard...</div>;
+  }
 
-      const admins = data.filter(user => user.role === "admin").length;
-      const users = data.filter(user => user.role === "user").length;
+  const {
+    stats,
+    recentTransactions,
+    popularBooks,
+    overdueList
+  } = data;
 
-      setUserRoles({ admins, users });
-    } catch (error) {
-      console.error("Error fetching user count:", error);
-    }
-  };
-
-  const fetchBooks = async () => {
-    try {
-      const response = await fetch(BOOKS_API_URL);
-      if (!response.ok) throw new Error("Gagal mengambil data buku");
-      const data = await response.json();
-
-      const totalBooks = data.length;
-      const availableBooks = data.filter(book => book.available > 0).length;
-      const borrowedBooks = totalBooks - availableBooks;
-
-      setBooks({ totalBooks, availableBooks, borrowedBooks });
-    } catch (error) {
-      console.error("Error fetching books data:", error);
-      setError("Gagal mengambil data buku");
-    }
-  };
-
-  const fetchTransactions = async (isPolling = false) => {
-    try {
-      const response = await fetch(TRANSACTIONS_API_URL);
-      if (!response.ok) throw new Error("Gagal mengambil data transaksi");
-      const data = await response.json();
-      
-      const totalBorrowed = data.length;
-      setTotalBorrowed(totalBorrowed);
-
-      if (isPolling && data.length > 0 && transactions.length > 0) {
-        const latestTransaction = data[0];
-        if (latestTransaction.id !== transactions[0].id) {
-          setNewTransaction(latestTransaction);
-        }
-      }
-
-      setTransactions(data.slice(0, 5));
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
-    }
-  };
-
-  const fetchDailyReport = async () => {
-    try {
-      const response = await fetch(`${TRANSACTIONS_API_URL}/report/daily`);
-      if (!response.ok) throw new Error("Gagal mengambil laporan harian");
-      const data = await response.json();
-
-      const labels = data.map(item => item.date);
-      const borrowCounts = data.map(item => item.borrow_count);
-
-      setDailyData({ labels, data: borrowCounts });
-    } catch (error) {
-      console.error("Error fetching daily report:", error);
-    }
-  };
-
-  const fetchMonthlyReport = async () => {
-    try {
-      const response = await fetch(`${TRANSACTIONS_API_URL}/report/monthly`);
-      if (!response.ok) throw new Error("Gagal mengambil laporan bulanan");
-      const data = await response.json();
-
-      const labels = data.map(item => item.month);
-      const borrowCounts = data.map(item => item.borrow_count);
-
-      setMonthlyData({ labels, data: borrowCounts });
-    } catch (error) {
-      console.error("Error fetching monthly report:", error);
-    }
-  };
-
-  const fetchYearlyReport = async () => {
-    try {
-      const response = await fetch(`${TRANSACTIONS_API_URL}/report/yearly`);
-      if (!response.ok) throw new Error("Gagal mengambil laporan tahunan");
-      const data = await response.json();
-
-      const labels = data.map(item => item.year);
-      const borrowCounts = data.map(item => item.borrow_count);
-
-      setYearlyData({ labels, data: borrowCounts });
-    } catch (error) {
-      console.error("Error fetching yearly report:", error);
-    }
-  };
-
-  const getChartData = () => {
-    switch (selectedPeriod) {
-      case "daily":
-        return dailyData;
-      case "monthly":
-        return monthlyData;
-      case "yearly":
-        return yearlyData;
-      default:
-        return dailyData;
-    }
+  const chartData = {
+    labels: popularBooks.map((b) => b.title),
+    datasets: [
+      {
+        label: "Jumlah Peminjaman",
+        data: popularBooks.map((b) => b.borrowCount),
+        backgroundColor: "rgba(59,130,246,0.6)",
+      },
+    ],
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-3xl font-bold text-gray-800 mb-4">Admin Dashboard</h2>
-
-      {error && <p className="text-red-500 text-center">{error}</p>}
+    <div className="p-6 bg-gray-100 min-h-screen space-y-6">
+      <h2 className="text-3xl font-bold">Dashboard Admin</h2>
+      {error && <div className="text-red-500">{error}</div>}
 
       {/* Statistik */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <DashboardCard 
-          title="Anggota Terdaftar" 
-          count={`${userRoles.users} User | ${userRoles.admins} Admin`} 
-          icon={<Users size={28} />} 
-          color="bg-blue-500 text-white" 
-        />
-        <DashboardCard 
-          title="Buku Tersedia" 
-          count={books.availableBooks} 
-          icon={<BookOpen size={28} />} 
-          color="bg-blue-500 text-white" 
-        />
-        <DashboardCard 
-          title="Buku Dipinjam" 
-          count={books.borrowedBooks} 
-          icon={<CheckCircle size={28} />} 
-          color="bg-blue-500 text-white" 
-        />
-        <DashboardCard 
-          title="Total Buku" 
-          count={books.totalBooks} 
-          icon={<ListChecks size={28} />} 
-          color="bg-blue-500 text-white" 
-        />
-        <DashboardCard 
-          title="Total Peminjaman" 
-          count={totalBorrowed} 
-          icon={<CheckCircle size={28} />} 
-          color="bg-blue-500 text-white" 
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <DashboardCard title="Total Buku" count={stats.totalBooks} icon={<BookOpen size={28} />} />
+        <DashboardCard title="Buku Dipinjam" count={stats.borrowedBooks} icon={<CheckCircle size={28} />} />
+        <DashboardCard title="Buku Tersedia" count={stats.availableBooks} icon={<ListChecks size={28} />} />
+        <DashboardCard title="Transaksi Hari Ini" count={stats.transactionsToday} icon={<Bell size={28} />} />
+        <DashboardCard title="Total Transaksi" count={stats.totalTransactions} icon={<CheckCircle size={28} />} />
+        <DashboardCard title="Jumlah Pengguna" count={stats.users} icon={<Users size={28} />} />
+        <DashboardCard title="Jumlah Admin" count={stats.admins} icon={<Users size={28} />} />
       </div>
 
-      {/* Diagram Statistik */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h3 className="text-2xl font-bold text-gray-800 mb-4">Statistik Peminjaman</h3>
-        <div className="mb-4">
-          <button 
-            className={`mr-2 px-4 py-2 rounded ${selectedPeriod === "daily" ? "bg-blue-500 text-white" : "bg-gray-200"}`} 
-            onClick={() => setSelectedPeriod("daily")}
-          >
-            Harian
-          </button>
-          <button 
-            className={`mr-2 px-4 py-2 rounded ${selectedPeriod === "monthly" ? "bg-blue-500 text-white" : "bg-gray-200"}`} 
-            onClick={() => setSelectedPeriod("monthly")}
-          >
-            Bulanan
-          </button>
-          <button 
-            className={`px-4 py-2 rounded ${selectedPeriod === "yearly" ? "bg-blue-500 text-white" : "bg-gray-200"}`} 
-            onClick={() => setSelectedPeriod("yearly")}
-          >
-            Tahunan
-          </button>
-        </div>
-        <Bar
-          data={{
-            labels: getChartData().labels,
-            datasets: [
-              {
-                label: 'Jumlah Peminjaman',
-                data: getChartData().data,
-                backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1,
-              },
-            ],
-          }}
-          options={{
-            responsive: true,
-            plugins: {
-              legend: {
-                position: 'top',
-              },
-              title: {
-                display: true,
-                text: `Statistik Peminjaman ${selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)}`,
-              },
-            },
-          }}
-        />
+      {/* Grafik Populer */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h3 className="text-xl font-semibold mb-4">Buku Paling Populer</h3>
+        <Bar data={chartData} options={{ responsive: true }} />
       </div>
 
-      {/* Row Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Kotak Selamat Datang */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-2xl font-bold text-gray-800 mb-2">Halo Admin</h3>
-          <p className="text-gray-600">Selamat Datang di admin Perpustakaan UNSRAT</p>
+      {/* 📂 Tombol Ekspor */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h3 className="text-xl font-semibold mb-4 flex items-center text-blue-700">
+          📤 Ekspor Data Laporan
+        </h3>
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+          <Button
+            onClick={() =>
+              window.open("http://localhost:4000/transactions/export/overdue", "_blank")
+            }
+            className="bg-red-600 text-white px-4 py-2 rounded"
+          >
+            📬 Ekspor Keterlambatan (Excel)
+          </Button>
+          <Button
+            onClick={() =>
+              window.open("http://localhost:4000/transactions/export/borrowed", "_blank")
+            }
+            className="bg-yellow-600 text-white px-4 py-2 rounded"
+          >
+            📚 Ekspor Buku Dipinjam (Excel)
+          </Button>
+          <Button
+            onClick={() =>
+              window.open("http://localhost:4000/transactions/export/all", "_blank")
+            }
+            className="bg-gray-800 text-white px-4 py-2 rounded"
+          >
+            📑 Ekspor Semua Transaksi (Excel)
+          </Button>
         </div>
+      </div>
 
-        {/* Notifikasi Peminjaman */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="bg-gray-800 text-white p-2 rounded-md text-center font-bold flex items-center justify-center">
-            <Bell size={20} className="mr-2" /> NOTIFIKASI
-          </div>
-          <div className="p-4">
-            {newTransaction && (
-              <div className="bg-yellow-100 border-l-4 border-yellow-500 p-3 rounded-md mb-3 animate-pulse">
-                <p className="text-yellow-800 font-bold">Peminjaman Baru!</p>
-                <p className="text-yellow-700">{newTransaction.user} meminjam "{newTransaction.book}"</p>
-                <p className="text-yellow-600 text-sm">{newTransaction.date} - {newTransaction.time}</p>
-              </div>
-            )}
+      {/* 📬 Daftar Keterlambatan */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h3 className="text-xl font-semibold mb-4 text-red-600 flex items-center">
+          <Bell className="mr-2" /> Buku Belum Dikembalikan (Terlambat)
+        </h3>
 
-            {transactions.length > 0 ? (
-              <div className="space-y-3">
-                {transactions.map((transaction, index) => (
-                  <NotificationItem 
-                    key={index} 
-                    user={transaction.user} 
-                    book={transaction.book} 
-                    date={transaction.date} 
-                    time={transaction.time}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center">📢 Belum ada peminjaman terbaru.</p>
-            )}
-          </div>
+        {overdueList && overdueList.length > 0 ? (
+          <ul className="space-y-3">
+            {overdueList.map((item: any) => (
+              <li
+                key={item.id}
+                className="border rounded p-3 bg-red-50 shadow-sm text-sm"
+              >
+                <div className="font-semibold text-red-800">
+                  🔴 {item.userName} belum mengembalikan <em>“{item.bookTitle}”</em>
+                </div>
+                <div className="text-gray-600">
+                  Jatuh tempo: {moment(item.dueDate).format("LL")} (
+                  {moment(item.dueDate).fromNow()})
+                </div>
+                {item.emailSentAt && (
+                  <div className="text-green-700 text-xs mt-1">
+                    📧 Email dikirim: {moment(item.emailSentAt).fromNow()}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500">✅ Semua buku telah dikembalikan tepat waktu.</p>
+        )}
+      </div>
+
+      {/* Transaksi Terbaru */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h3 className="text-xl font-semibold mb-4">Transaksi Terbaru</h3>
+        <div className="space-y-2">
+          {recentTransactions.length > 0 ? recentTransactions.map((tx: any) => (
+            <div key={tx.id} className="border-b pb-2">
+              📌 <strong>{tx.userName}</strong> meminjam <em>"{tx.bookTitle}"</em> — {moment(tx.date).fromNow()}
+            </div>
+          )) : <p className="text-gray-500">Tidak ada transaksi terbaru.</p>}
         </div>
       </div>
     </div>
   );
 };
 
-// Komponen Kartu Statistik
-const DashboardCard = ({ title, count, icon, color }) => (
-  <Card className={`p-6 ${color} text-center rounded-lg shadow-md flex flex-col items-center transform transition-transform duration-200 hover:scale-105`}>
-    <div className="mb-3">{icon}</div>
-    <h3 className="text-xl font-semibold">{title}</h3>
-    <p className="text-lg">{count}</p>
+const DashboardCard = ({
+  title,
+  count,
+  icon,
+}: {
+  title: string;
+  count: number | string;
+  icon: React.ReactNode;
+}) => (
+  <Card className="p-6 bg-white shadow rounded-lg flex items-center space-x-4">
+    <div className="text-blue-600">{icon}</div>
+    <div>
+      <p className="text-sm text-gray-500">{title}</p>
+      <p className="text-xl font-bold">{count}</p>
+    </div>
   </Card>
 );
 
-// Komponen Notifikasi Peminjaman
-const NotificationItem = ({ user, book, date, time }) => (
-  <div className="border-b pb-2 flex justify-between items-center">
-    <div>
-      <p className="text-gray-700 font-semibold">{user} meminjam "{book}"</p>
-      <span className="text-gray-500 text-sm">{date} - {time}</span>
-    </div>
-  </div>
-);
-
-export default withAuth(AdminDashboard, 'admin');
+export default withAuth(AdminDashboard, "admin");

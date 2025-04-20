@@ -2,189 +2,219 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Trash, Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import UserFormPopup from "./userformpopup"; // Import popup untuk tambah/edit user
-import withAuth from "@/hoc/withAuth"; // Import HOC proteksi
+import { Pencil, Trash, Plus, Search } from "lucide-react";
+import withAuth from "@/hoc/withAuth";
+import UserFormPopup from "./userformpopup";
 
 const API_BASE_URL = "http://localhost:4000/users";
 
 const UserManagementPage = () => {
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-    const [search, setSearch] = useState("");
-    const [isPopupOpen, setIsPopupOpen] = useState(false);
-    const [editUser, setEditUser] = useState(null);
-    const [deleteUserId, setDeleteUserId] = useState(null); // Untuk menyimpan user yang akan dihapus
-    const [isMounted, setIsMounted] = useState(false); // Untuk mencegah hydration error
+  const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [editUser, setEditUser] = useState(null);
+  const [deleteUserId, setDeleteUserId] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
 
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
-    useEffect(() => {
-        if (isMounted) {
-            fetchUsers();
-        }
-    }, [isMounted]);
+  useEffect(() => {
+    if (isMounted) {
+      fetchUsers();
+    }
+  }, [isMounted]);
 
-    const fetchUsers = async () => {
-        try {
-            const response = await fetch(API_BASE_URL);
-            if (!response.ok) throw new Error("Gagal mengambil data pengguna");
+  useEffect(() => {
+    if (search.trim() === "") {
+      setFilteredUsers(users);
+    } else {
+      const searchLower = search.toLowerCase();
+      const filtered = users.filter(({ fullName, faculty, nim }) =>
+        [fullName, faculty, nim].join(" ").toLowerCase().includes(searchLower)
+      );
+      setFilteredUsers(filtered);
+    }
+  }, [search, users]);
 
-            const data = await response.json();
-            if (!Array.isArray(data)) throw new Error("Data pengguna tidak valid");
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch(API_BASE_URL, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
 
-            setUsers(data.filter(user => user.role === "user"));
-        } catch (error) {
-            setError(error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error("Data pengguna tidak valid");
 
-    const handleDelete = async () => {
-        if (!deleteUserId) return;
+      setUsers(data);
+      setFilteredUsers(data);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        setLoading(true);
-        try {
-            const response = await fetch(`${API_BASE_URL}/${deleteUserId}`, { method: "DELETE" });
+  const handleDelete = async () => {
+    if (!deleteUserId) return;
 
-            if (!response.ok) {
-                throw new Error("Gagal menghapus pengguna");
-            }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/${deleteUserId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
 
-            // Hapus user dari state tanpa refresh
-            setUsers(prevUsers => prevUsers.filter(user => user.id !== deleteUserId));
-            setDeleteUserId(null); // Tutup modal setelah berhasil hapus
-        } catch (error) {
-            setError(error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+      if (!response.ok) throw new Error("Gagal menghapus pengguna");
 
-    const handleSaveUser = async (userData) => {
-        setLoading(true);
-        try {
-            const method = userData.id ? "PUT" : "POST";
-            const endpoint = userData.id ? `${API_BASE_URL}/${userData.id}` : API_BASE_URL;
+      setUsers(prev => prev.filter(user => user.id !== deleteUserId));
+      setDeleteUserId(null);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            const response = await fetch(endpoint, {
-                method,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(userData),
-            });
+  const handleSaveUser = async (userData) => {
+    if (!userData) return;
 
-            if (!response.ok) throw new Error("Gagal menyimpan data pengguna");
+    setLoading(true);
+    try {
+      const method = userData.id ? "PUT" : "POST";
+      const endpoint = userData.id ? `${API_BASE_URL}/${userData.id}` : `${API_BASE_URL}/register`;
 
-            fetchUsers();
-            setIsPopupOpen(false);
-            setEditUser(null);
-        } catch (error) {
-            setError(error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+      const payload = { ...userData };
+      if (method === "PUT" && !userData.password) {
+        delete payload.password;
+      }
 
-    if (!isMounted) return <div className="min-h-screen bg-gray-100 flex justify-center items-center">Loading...</div>;
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-    return (
-        <div className="p-6 max-w-6xl mx-auto bg-white shadow-md rounded-lg">
-            <h1 className="text-3xl font-bold mb-6 text-gray-700 text-center">Daftar Mahasiswa</h1>
+      if (!response.ok) throw new Error("Gagal menyimpan data pengguna");
 
-            {/* Search & Add Button */}
-            <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center bg-gray-100 p-2 rounded-md">
-                    <Search className="text-gray-500" size={18} />
-                    <Input 
-                        className="ml-2 border-none bg-transparent focus:ring-0"
-                        placeholder="Cari Nama, Fakultas, atau NIM..." 
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </div>
-                <Button onClick={() => setIsPopupOpen(true)} className="bg-[#784d1e] hover:bg-[#5a3516] text-white py-2 px-4 rounded-lg shadow-md flex items-center gap-2">
-                    <Plus size={16} /> Tambah Mahasiswa
-                </Button>
-            </div>
+      fetchUsers();
+      setIsPopupOpen(false);
+      setEditUser(null);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            {/* Table */}
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <Table className="w-full text-gray-700">
-                    <TableHeader className="bg-gray-100 text-gray-800">
-                        <TableRow>
-                            <TableHead className="p-3 text-center">No.</TableHead>
-                            <TableHead className="p-3 text-center">Nama</TableHead>
-                            <TableHead className="p-3 text-center">Fakultas</TableHead>
-                            <TableHead className="p-3 text-center">NIM</TableHead>
-                            <TableHead className="p-3 text-center">Aksi</TableHead> 
-                        </TableRow>
-                    </TableHeader>
+  if (!isMounted) return <div className="min-h-screen flex justify-center items-center">Loading...</div>;
 
-                    <TableBody>
-                        {users.map((user, index) => (
-                            <TableRow key={user.id} className="hover:bg-gray-50 text-center">
-                                <TableCell className="p-3">{index + 1}</TableCell>
-                                <TableCell className="p-3">{user.nama || "-"}</TableCell>
-                                <TableCell className="p-3">{user.fakultas || "-"}</TableCell>
-                                <TableCell className="p-3">{user.nim || "-"}</TableCell>
-                                <TableCell className="p-3">
-                                    <div className="flex justify-center space-x-2">
-                                        {/* <Button onClick={() => setEditUser(user)} className="bg-[#784d1e] hover:bg-[#5a3516] text-white p-2 rounded-md">
-                                            <Pencil size={16} />
-                                        </Button> */}
-                                        <Button 
-                                            onClick={() => setDeleteUserId(user.id)} 
-                                            className="bg-[#784d1e] hover:bg-[#5a3516] text-white p-2 rounded-md"
-                                        >
-                                            <Trash size={16} />
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
-
-            {/* Popup Tambah/Edit */}
-            <UserFormPopup 
-                isOpen={isPopupOpen || !!editUser} 
-                onClose={() => { setIsPopupOpen(false); setEditUser(null); }} 
-                user={editUser} 
-                onSubmit={handleSaveUser} 
-            />
-
-            {/* Modal Konfirmasi Hapus */}
-            {deleteUserId && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                    <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-                        <h2 className="text-lg font-bold mb-4 text-center">Konfirmasi Hapus</h2>
-                        <p className="text-center text-gray-700 mb-4">Apakah Anda yakin ingin menghapus pengguna ini?</p>
-                        <div className="flex justify-center space-x-4">
-                            <Button 
-                                onClick={() => setDeleteUserId(null)} 
-                                className="bg-[#928776] hover:bg-[#444e57] text-[#1f2023] px-4 py-2 rounded"
-                            >
-                                Batal
-                            </Button>
-                            <Button 
-                                onClick={handleDelete} 
-                                className="bg-[#784d1e] hover:bg-[#5a3516] text-white px-4 py-2 rounded"
-                            >
-                                Hapus
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+  return (
+    <div className="p-6 max-w-6xl mx-auto bg-white shadow-md rounded-lg">
+      <div className="w-full flex justify-between items-center mb-4 mt-1 pl-3">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-800">Daftar Mahasiswa</h3>
+          <p className="text-slate-500">Overview of the current users.</p>
         </div>
-    );
+        <div className="flex gap-2">
+          <div className="relative w-full max-w-sm min-w-[200px]">
+            <Input
+              placeholder="Cari..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-3 pr-10"
+            />
+            <Search className="absolute right-2 top-2.5 w-5 h-5 text-slate-500" />
+          </div>
+          <Button onClick={() => setIsPopupOpen(true)} className="flex gap-2">
+            <Plus size={18} /> Tambah
+          </Button>
+        </div>
+      </div>
+
+      <div className="overflow-auto shadow-md rounded-lg">
+        <table className="w-full text-sm text-left table-auto min-w-max">
+          <thead className="bg-slate-50 text-slate-500">
+            <tr>
+              <th className="p-4">No.</th>
+              <th className="p-4">Nama</th>
+              <th className="p-4">Fakultas</th>
+              <th className="p-4">NIM</th>
+              <th className="p-4 text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map((user, index) => (
+              <tr key={user.id} className="hover:bg-slate-50 border-b">
+                <td className="p-4">{index + 1}</td>
+                <td className="p-4">{user.fullName || "-"}</td>
+                <td className="p-4">{user.faculty || "-"}</td>
+                <td className="p-4">{user.nim || "-"}</td>
+                <td className="p-4 text-center">
+                  <div className="flex justify-center gap-2">
+                    <Button
+                      onClick={() => setEditUser(user)}
+                      className="bg-slate-600 hover:bg-slate-700 text-white p-2 rounded-md"
+                    >
+                      <Pencil size={16} />
+                    </Button>
+                    <Button
+                      onClick={() => setDeleteUserId(user.id)}
+                      className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-md"
+                    >
+                      <Trash size={16} />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filteredUsers.length === 0 && (
+              <tr>
+                <td colSpan={5} className="text-center py-4 text-slate-500">
+                  Tidak ada data pengguna
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <UserFormPopup
+        isOpen={isPopupOpen || !!editUser}
+        onClose={() => {
+          setIsPopupOpen(false);
+          setEditUser(null);
+        }}
+        user={editUser}
+        onSubmit={handleSaveUser}
+      />
+
+      {deleteUserId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h2 className="text-lg font-bold text-center mb-4">Konfirmasi Hapus</h2>
+            <p className="text-center text-gray-700 mb-4">Yakin ingin menghapus pengguna ini?</p>
+            <div className="flex justify-center gap-4">
+              <Button onClick={() => setDeleteUserId(null)} variant="outline">Batal</Button>
+              <Button onClick={handleDelete} className="bg-red-600 text-white hover:bg-red-700">Hapus</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
-export default withAuth(UserManagementPage, "admin"); // Hanya admin yang bisa akses
+export default withAuth(UserManagementPage, "admin");

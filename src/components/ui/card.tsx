@@ -25,8 +25,14 @@ const CardFooter: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <div className="border-t mt-2 pt-2 text-right border-[#444e57]">{children}</div>;
 };
 
+const CardTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <h3 className="text-lg font-semibold text-[#1f2023] mb-1">{children}</h3>
+  );
+};
+
 // Named Exports
-export { Card, CardHeader, CardContent, CardFooter };
+export { Card, CardHeader, CardContent, CardFooter, CardTitle };
 
 // Default Export (Jika diperlukan)
 export default Card;

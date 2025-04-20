@@ -46,9 +46,11 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:4000/auth/login", {
+      // Kirim login request
+      const response = await fetch("http://localhost:4000/auth/staff/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include", // penting untuk cookie!
         body: JSON.stringify({ email, password }),
       });
 
@@ -57,31 +59,21 @@ export default function AdminLoginPage() {
         throw new Error(errorData.message || "Login gagal.");
       }
 
-      const data = await response.json();
-      localStorage.setItem("token", data.token);
-      // login(data.token); // Panggil fungsi login dari konteks jika diperlukan
+      // Ambil data user dari token cookie
+      const resUser = await fetch("http://localhost:4000/auth/me", {
+        method: "GET",
+        credentials: "include",
+      });
 
-      const decodedToken = jwtDecode(data.token);
-      console.log("✅ Decoded Token after login:", decodedToken);
+      const user = await resUser.json();
+      const role = user.role?.toLowerCase();
 
-      const userId = decodedToken.userId || decodedToken.id;
-      if (!userId) {
-        console.error("❌ userId tidak ditemukan dalam token.");
-        throw new Error("Login gagal. Token tidak valid.");
-      }
-
-      localStorage.setItem("userId", userId.toString());
-      console.log("✅ userId disimpan di localStorage:", localStorage.getItem("userId"));
-
-      const userRole = decodedToken.role?.toLowerCase().trim();
-      if (userRole === "admin") {
+      if (role === "admin") {
         router.replace("/admin/dashboard");
-      } else if (userRole === "user") {
-        const redirectPath = localStorage.getItem("redirectAfterLogin") || "/peminjaman";
-        localStorage.removeItem("redirectAfterLogin"); // Hapus setelah digunakan
-        router.replace(redirectPath);
+      } else if (role === "staff") {
+        router.replace("/staff/dashboard");
       } else {
-        throw new Error("Role tidak valid. Hubungi admin.");
+        router.replace("/dashboard");
       }
     } catch (err) {
       setError(err.message);
@@ -94,7 +86,7 @@ export default function AdminLoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
         <h1 className="text-2xl font-bold text-center text-[#1f2023] mb-6">
-          Login Admin
+          Login
         </h1>
         {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
         <input

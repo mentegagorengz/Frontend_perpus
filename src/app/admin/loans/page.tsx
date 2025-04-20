@@ -1,226 +1,188 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import withAuth from "@/hoc/withAuth";
-import * as XLSX from "xlsx"; // 📌 Untuk Export Excel
+import * as XLSX from "xlsx";
 
-const API_BASE_URL = "http://localhost:4000/transactions"; // Sesuaikan dengan backend
+const API_BASE_URL = "http://localhost:4000/transactions";
 
 const BorrowingHistoryPage = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [elapsedTimes, setElapsedTimes] = useState({});
 
   useEffect(() => {
     fetchHistory();
     checkAdminRole();
   }, []);
 
-  // ✅ Utility function to decode token
-  const decodeToken = (token: string) => {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsedTimes((prev) =>
+        history.reduce((acc, t) => {
+          if (t.status === "borrowed") {
+            acc[t.id] = formatElapsedTime(t.borrowDate);
+          }
+          return acc;
+        }, {})
+      );
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [history]);
+
+  const formatElapsedTime = (startDate) => {
+    const diffMs = new Date().getTime() - new Date(startDate).getTime();
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diffMs / (1000 * 60)) % 60);
+    const seconds = Math.floor((diffMs / 1000) % 60);
+    return `${days > 0 ? `${days} hari ` : ""}${hours} jam ${minutes} menit ${seconds} detik`.trim();
+  };
+
+  const decodeToken = (token) => {
     try {
       return JSON.parse(atob(token.split(".")[1]));
-    } catch (error) {
-      console.error("Gagal membaca token:", error);
+    } catch {
       return null;
     }
   };
 
-  // ✅ Cek apakah user adalah admin dari token
   const checkAdminRole = () => {
     const token = localStorage.getItem("token");
-    if (!token) return;
-
-    const decodedToken = decodeToken(token);
-    if (decodedToken) {
-      setIsAdmin(decodedToken.role === "admin");
+    if (token) {
+      const decodedToken = decodeToken(token);
+      setIsAdmin(decodedToken?.role === "admin");
     }
   };
 
-  // ✅ Fetch data histori peminjaman dari backend
   const fetchHistory = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("Anda harus login untuk melihat histori peminjaman.");
-
-      const response = await fetch(API_BASE_URL, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error("Gagal mengambil data histori peminjaman");
-
-      const data = await response.json();
-      setHistory(data);
-    } catch (error) {
-      setError(error.message);
+      const response = await fetch(API_BASE_URL, { method: "GET", credentials: "include" });
+      if (!response.ok) throw new Error("Gagal mengambil data histori peminjaman.");
+      setHistory(await response.json());
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Fungsi API Helper untuk PATCH request
-  const handleTransactionAction = async (transactionId: number, action: string, successMessage: string) => {
+  const handleTransactionAction = async (transactionId, action, successMessage) => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) throw new Error("Anda harus login sebagai admin untuk melakukan tindakan ini.");
-  
-      console.log(`🔍 Mengirim request: ${API_BASE_URL}/${action}/${transactionId}`);
-  
+      if (!token) throw new Error("Anda harus login sebagai admin.");
       const response = await fetch(`${API_BASE_URL}/${action}/${transactionId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("❌ Error dari server:", errorData);
-        throw new Error(errorData.message || `Gagal melakukan aksi: ${action}`);
-      }
-  
+      if (!response.ok) throw new Error((await response.json()).message || "Gagal melakukan aksi.");
       alert(successMessage);
-      fetchHistory(); // 🔄 Refresh data histori peminjaman
-      fetchBooks(); // 🔄 Refresh daftar buku agar stok diperbarui
-    } catch (error) {
-      console.error("❌ Gagal melakukan aksi:", error);
-      alert(error.message);
+      fetchHistory();
+    } catch (err) {
+      alert(err.message);
     }
-  };  
+  };
 
-  // ✅ Fungsi Export Laporan ke Excel
   const exportToExcel = () => {
-    if (history.length === 0) {
-      alert("Tidak ada data untuk diekspor.");
-      return;
-    }
-
-    const formattedData = history.map((transaction) => ({
-      "Nama Peminjam": transaction.User?.nama || "Tidak tersedia",
-      "Judul Buku": transaction.Book?.title || "Tidak tersedia",
-      "Tanggal Peminjaman": new Date(transaction.borrowDate).toLocaleDateString("id-ID"),
-      "Status": transaction.status === "pending"
-        ? "Menunggu Konfirmasi"
-        : transaction.status === "borrowed"
-        ? "Sedang Dipinjam"
-        : "Dikembalikan",
+    if (!history.length) return alert("Tidak ada data untuk diekspor.");
+    const formattedData = history.map((t) => ({
+      "Nama Peminjam": t.User?.nama || "-",
+      "Judul Buku": t.Book?.title || "-",
+      "Tanggal Peminjaman": new Date(t.borrowDate).toLocaleDateString("id-ID"),
+      "Batas Pengembalian": new Date(t.dueDate).toLocaleDateString("id-ID"),
+      "Tanggal Kembali": t.returnDate ? new Date(t.returnDate).toLocaleDateString("id-ID") : "-",
+      "Status": t.status === "pending" ? "Menunggu Konfirmasi"
+        : t.status === "borrowed" ? "Sedang Dipinjam" : "Dikembalikan",
     }));
-
     const worksheet = XLSX.utils.json_to_sheet(formattedData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Peminjaman");
     XLSX.writeFile(workbook, `Laporan_Peminjaman.xlsx`);
   };
 
-  const fetchBooks = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("Anda harus login untuk melihat daftar buku.");
-  
-      const response = await fetch("http://localhost:4000/books", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-  
-      if (!response.ok) throw new Error("Gagal mengambil data buku");
-  
-      const data = await response.json();
-      // Assuming you have a state to set the books data
-      // setBooks(data);
-    } catch (error) {
-      console.error("Gagal mengambil data buku:", error);
-    }
-  };
+  const isOverdue = (transaction) => transaction.status === "borrowed" && new Date(transaction.dueDate) < new Date();
 
   return (
-    <div className="p-6 flex justify-center">
-      <div className="w-full max-w-6xl shadow-lg rounded-lg bg-white p-6">
-        <h1 className="text-2xl font-bold mb-4 text-center">📜 Histori Peminjaman Buku</h1>
-
-        {loading && <p className="text-blue-500 text-center">Memuat data...</p>}
-        {error && <p className="text-center">{error}</p>}
-
-        {/* 🔹 Tombol Export Excel */}
-        <div className="flex justify-end mb-4">
-          <Button className="bg-[#784d1e] text-white px-3 py-2 rounded-md" onClick={exportToExcel}>
-            📥 Download Laporan Excel
-          </Button>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-3">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-800">Histori Peminjaman Buku</h3>
+          <p className="text-slate-500">Overview of the current borrowing activities.</p>
         </div>
+        <input
+          className="bg-white w-full max-w-sm h-10 px-3 py-2 border rounded shadow-sm"
+          placeholder="Search for transactions..."
+        />
+      </div>
 
-        {/* 🔹 Tabel Histori Peminjaman */}
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-200">
-              <TableHead>Nama Peminjam</TableHead>
-              <TableHead>Judul Buku</TableHead>
-              <TableHead>Tanggal Peminjaman</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {history.length > 0 ? (
-              history.map((transaction: any) => (
-                <TableRow key={transaction.id} className="hover:bg-gray-100 transition">
-                  <TableCell>{transaction.User?.nama || "Tidak tersedia"}</TableCell>
-                  <TableCell>{transaction.Book?.title || "Tidak tersedia"}</TableCell>
-                  <TableCell>{new Date(transaction.borrowDate).toLocaleDateString("id-ID")}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-md text-white ${transaction.status === "pending"
-                      ? "bg-gray-500"
-                      : transaction.status === "borrowed"
-                      ? "bg-yellow-500"
-                      : "bg-green-500"}`}>
-                      {transaction.status === "pending"
-                        ? "Menunggu Konfirmasi"
-                        : transaction.status === "borrowed"
-                        ? "Sedang Dipinjam"
-                        : "Dikembalikan"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                  {isAdmin && transaction.status === "pending" && (
-                    <Button
-                      className="bg-[#784d1e] text-white px-3 py-1 rounded-md hover:bg-[#5a3516]"
-                      onClick={() => handleTransactionAction(transaction.id, "confirm", "Peminjaman telah dikonfirmasi!")}
-                    >
-                      Konfirmasi Peminjaman
-                    </Button>
+      <div className="relative flex flex-col w-full h-full overflow-scroll bg-white shadow-md rounded-lg">
+        <table className="w-full text-left table-auto">
+          <thead>
+            <tr>
+              {["Nama", "Judul Buku", "Tgl Pinjam", "Jatuh Tempo", "Pengembalian", "Status", "Durasi Dipinjam", "Status Keterlambatan", "Aksi"].map((header) => (
+                <th key={header} className="p-2 border-b bg-slate-50 text-xs font-normal text-slate-500">{header}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {history.length ? history.map((transaction) => (
+              <tr key={transaction.id} className="hover:bg-slate-50 border-b">
+                <td className="p-2 text-xs text-slate-800">{transaction.User?.fullName || "-"}</td>
+                <td className="p-2 text-xs text-slate-500">{transaction.Book?.title || "-"}</td>
+                <td className="p-2 text-xs text-slate-500">{new Date(transaction.borrowDate).toLocaleDateString("id-ID")}</td>
+                <td className="p-2 text-xs text-slate-500">{new Date(transaction.dueDate).toLocaleDateString("id-ID")}</td>
+                <td className="p-2 text-xs text-slate-500">{transaction.returnDate ? new Date(transaction.returnDate).toLocaleDateString("id-ID") : "-"}</td>
+                <td className="p-2">
+                  <span className={`inline-block px-2 py-1 rounded text-white text-xs ${
+                    transaction.status === "pending-pickup" ? "bg-yellow-500"
+                      : transaction.status === "borrowed" ? "bg-blue-600"
+                      : transaction.status === "returned" ? "bg-green-600" : "bg-gray-500"
+                  }`}>
+                    {transaction.status === "pending-pickup" ? "Menunggu Pengambilan"
+                      : transaction.status === "borrowed" ? "Sedang Dipinjam"
+                      : transaction.status === "returned" ? "Sudah Dikembalikan" : "Tidak Diketahui"}
+                  </span>
+                </td>
+                <td className="p-2 text-xs text-slate-500">{elapsedTimes[transaction.id] || "-"}</td>
+                <td className="p-2 text-xs">
+                  {isOverdue(transaction) ? <span className="text-red-600 font-semibold">Lewat Batas</span> : "-"}
+                </td>
+                <td className="p-2 space-y-1">
+                  {isAdmin && transaction.status === "pending-pickup" && (
+                    <>
+                      <Button className="bg-blue-600 text-white px-3 py-1 text-xs rounded-md" onClick={() => handleTransactionAction(transaction.id, "pickup", "📦 Buku berhasil diambil oleh peminjam.")}>
+                        Konfirmasi Ambil
+                      </Button>
+                      <Button className="bg-blue-400 text-white px-3 py-1 text-xs rounded-md" onClick={() => handleTransactionAction(transaction.id, "confirm", "📦 Buku berhasil diambil (QR).")}>
+                        Scan QR Ambil
+                      </Button>
+                    </>
                   )}
-
                   {isAdmin && transaction.status === "borrowed" && (
-                    <Button
-                      className="bg-[#784d1e] text-white px-3 py-1 rounded-md hover:bg-[#5a3516] ml-2"
-                      onClick={() => handleTransactionAction(transaction.id, "complete", "Peminjaman telah diselesaikan!")}
-                    >
-                      Selesaikan Peminjaman
-                    </Button>
+                    <>
+                      <Button className="bg-green-600 text-white px-3 py-1 text-xs rounded-md" onClick={() => handleTransactionAction(transaction.id, "return-qr", "📘 Buku berhasil dikembalikan (QR).")}>
+                        Scan QR Kembali
+                      </Button>
+                      <Button className="bg-green-500 text-white px-3 py-1 text-xs rounded-md" onClick={() => handleTransactionAction(transaction.id, "return", "📘 Pengembalian buku dikonfirmasi manual.")}>
+                        Konfirmasi Kembali
+                      </Button>
+                    </>
                   )}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-4">
-                  Tidak ada data peminjaman
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan={9} className="text-center py-2 text-gray-500 border">Tidak ada data peminjaman.</td>
+              </tr>
             )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -64,22 +64,22 @@ export default function Profil() {
 
         {/* Pimpinan Perpustakaan */}
         <section className="mb-12">
-          <h2 className="text-3xl font-bold text-[#1f2023] mb-6">Pimpinan Perpustakaan</h2>
+          <h2 className="text-3xl font-bold text-[#1f2023] mb-6">Kepala Perpustakaan</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8">
             <figure className="text-center">
               <Image
-                src="/images/pimpinan1.jpg"
-                alt="Woerjarto, Pimpinan Perpustakaan (1951-1955)"
+                src="/images/Kepala_perpus.jpg"
+                alt="Ir. Mecky Manoppo, MT, Kepala UPT Perpustakaan UNSRAT"
                 width={150}
                 height={150}
                 className="w-full h-auto rounded-lg shadow-lg mb-3 object-cover"
               />
               <figcaption>
-                <p className="text-sm font-semibold text-gray-800">Woerjarto</p>
-                <p className="text-sm text-gray-500">(1951-1955)</p>
+                <p className="text-sm font-semibold text-gray-800">Ir. Mecky Manoppo, MT</p>
+                <p className="text-sm text-gray-500">Kepala UPT Perpustakaan UNSRAT</p>
               </figcaption>
             </figure>
-            <figure className="text-center">
+            {/* <figure className="text-center">
               <Image
                 src="/images/pimpinan2.jpg"
                 alt="Moerjopranoto, Pimpinan Perpustakaan (1955-1967)"
@@ -91,7 +91,7 @@ export default function Profil() {
                 <p className="text-sm font-semibold text-gray-800">Moerjopranoto</p>
                 <p className="text-sm text-gray-500">(1955-1967)</p>
               </figcaption>
-            </figure>
+            </figure> */}
           </div>
         </section>
 

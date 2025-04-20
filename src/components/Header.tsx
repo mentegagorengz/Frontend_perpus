@@ -27,7 +27,7 @@ export default function Header() {
       { href: "/profil", label: "Profil" },
       { href: isLoggedIn ? "/peminjaman" : "/login", label: "Peminjaman Buku" },
       { href: "/koleksi", label: "Koleksi daring" },
-      { href: "/pencarianbuku", label: "Koleksi" },
+      { href: "/Koleksi-publik", label: "Koleksi" },
     ],
     [isLoggedIn]
   );

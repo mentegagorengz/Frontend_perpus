@@ -13,7 +13,7 @@
     "@material-tailwind/react": "^2.1.10",
     "chart.js": "^4.4.8",
     "html5-qrcode": "^2.3.8",
-    "html5-qrcode-react": "^1.0.7",
+    // "html5-qrcode-react": "^1.0.7",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.474.0",
     "moment": "^2.30.1",

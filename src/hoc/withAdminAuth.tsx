@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 
-export default function withAdminAuth<T extends {}>(Component: React.ComponentType<T>) {
+export default function withAdminAuth<T extends Record<string, unknown>>(
+  Component: React.ComponentType<T>
+) {
   return function AuthenticatedComponent(props: T) {
     const router = useRouter();
     const [isVerified, setIsVerified] = useState<boolean>(false);
@@ -19,7 +21,7 @@ export default function withAdminAuth<T extends {}>(Component: React.ComponentTy
       }
 
       try {
-        const decodedToken: any = jwtDecode(token);
+        const decodedToken = jwtDecode<{ role: string }>(token);
         console.log("✅ Token Decoded:", decodedToken);
 
         if (!decodedToken || decodedToken.role !== "admin") {
@@ -28,7 +30,6 @@ export default function withAdminAuth<T extends {}>(Component: React.ComponentTy
           return;
         }
 
-        // Jika verifikasi sukses, izinkan render halaman
         setIsVerified(true);
       } catch (error) {
         console.error("❌ Error decoding token:", error);

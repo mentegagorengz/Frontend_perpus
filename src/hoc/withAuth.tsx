@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function withAuth<T extends {}>(
+export default function withAuth<T extends Record<string, unknown>>(
   Component: React.ComponentType<T>
 ) {
   return function AuthenticatedComponent(props: T) {
     const router = useRouter();
-    const [isVerified, setIsVerified] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const [isVerified, setIsVerified] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
       const verify = async () => {
@@ -26,7 +26,6 @@ export default function withAuth<T extends {}>(
 
           const user = await res.json();
           console.log("✅ Logged in user:", user);
-
           setIsVerified(true);
         } catch (err) {
           console.error("❌ Error saat verifikasi login:", err);

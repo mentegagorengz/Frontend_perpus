@@ -1,25 +1,25 @@
-import { MetadataRoute } from "next";
-
+import type { MetadataRoute } from 'next'
+ 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Perpustakaan UNSRAT",
-    short_name: "UNSRAT Library",
-    description: "Aplikasi perpustakaan UNSRAT berbasis web",
-    start_url: "/",
-    display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#ff0000", // Sesuai dengan tema warna baru (merah)
+    name: 'Next.js PWA',
+    short_name: 'NextPWA',
+    description: 'A Progressive Web App built with Next.js',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#ffffff',
+    theme_color: '#000000',
     icons: [
       {
-        src: "/icons/perpus.png",
-        sizes: "192x192",
-        type: "image/png",
+        src: '/icons/perpus.png', // ✅ TANPA 'public'
+        sizes: '192x192',
+        type: 'image/png',
       },
       {
-        src: "/icons/perpus.png",
-        sizes: "512x512",
-        type: "image/png",
+        src: '/icons/perpus.png', // ✅ TANPA 'public'
+        sizes: '512x512',
+        type: 'image/png',
       },
     ],
-  };
+  }
 }

@@ -12,6 +12,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="id">
+      <head>
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="theme-color" content="#000000" />
+      </head>
       <body className="flex flex-col min-h-screen bg-gray-100 text-gray-900">
         <AuthProvider>
           {/* Jika halaman berada di dalam /admin, gunakan layout admin */}
